@@ -69,15 +69,11 @@ def parse(filename):
 #   below LOW_CUTOFF and each point above HIGH_CUTOFF is removed.
 def threshold(means):
 
-    i = 0
     newmeans = list()
 
-    for datapoint in means:
-
+    for i in range(len(means)):
         if  i > LOW_CUTOFF and i < len(means) - HIGH_CUTOFF:
-            newmeans.append(datapoint)
-
-        i += 1
+            newmeans.append(means[i])
 
     return newmeans
 
