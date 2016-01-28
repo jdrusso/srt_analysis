@@ -84,8 +84,9 @@ def threshold(means):
 #   LOW_CUTOFF -> HIGH_CUTOFF range, and subtract that from the datapoints.
 def datafilter(means, thresholded):
 
+    # Make a list of only the values that are thresholded *out*. We will calculate
+    #   background noise from these.
     temp = list()
-
     for i in range(len(means)):
         if  i < LOW_CUTOFF or i > len(means) - HIGH_CUTOFF:
             temp.append(means[i])
@@ -99,12 +100,15 @@ def datafilter(means, thresholded):
     polyfilter = np.polyfit(x, y, 3)
     polyeqn = np.poly1d(polyfilter)
 
-    print("Terms for polynomial approximation of noise is %s" % polyfilter)
+    print("Polynomial approximation of noise is ", end="")
+    print(np.poly1d(polyeqn))
 
-    for i in range(len(x)):
-        y[i] = y[i] - polyeqn(x[i])
+    for i in range(len(thresholded)):
+        correction = thresholded[i][1] - polyeqn(float(thresholded[i][0]))
+        thresholded[i] = (thresholded[i][0], correction)
 
-    return [(x[i],y[i]) for i in range(len(x))]
+    return thresholded
+
 
 # Apply some thresholding and filtering to the dataset.
 def processdata(means):
@@ -119,6 +123,7 @@ def main(argv):
 
     filename = ""
 
+    # YOLO
     global LOW_CUTOFF
     global HIGH_CUTOFF
 
@@ -145,12 +150,14 @@ def main(argv):
 
     # Process data into a list of tuples
     unfiltered = [(key, data_means[key]) for key in data_means.keys()]
-    means_tuple = unfiltered
+
+    # Make a deep copy
+    means_tuple = [x for x in unfiltered]
 
     processed = processdata(means_tuple)
 
     plot = plt.plot(*zip(*processed), 'r')
-    plot2 = plt.plot(*zip(*unfiltered), 'b--')
+    # plot2 = plt.plot(*zip(*unfiltered), 'b--')
     plt.title("Temperature vs. Frequency Across Measured Spectra")
     plt.xlabel("Frequency (MHz)")
     plt.ylabel("Temperature (K)")
