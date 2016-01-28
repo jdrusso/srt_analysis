@@ -1,6 +1,7 @@
 import sys, getopt
 from collections import OrderedDict
 import matplotlib.pyplot as plt
+import numpy as np
 
 #These values are adjust to ignore the first and last 10 data points, since they
 #   go to 0 and are bad data.
@@ -12,6 +13,8 @@ NUM_CHANNELS = 135
 
 # Filtering cutoffs. This means filter the first LOW_CUTOFF, and the last
 # HIGH_CUTOFF data points from the dataset
+
+# These are some sample values
 LOW_CUTOFF = 45
 HIGH_CUTOFF = 23
 
@@ -80,34 +83,61 @@ def threshold(means):
 # Generate polyfit equation for background noise based on points outside the
 #   LOW_CUTOFF -> HIGH_CUTOFF range, and subtract that from the datapoints.
 def datafilter(means, thresholded):
-    pass
+
+    temp = list()
+
+    for i in range(len(means)):
+        if  i < LOW_CUTOFF or i < len(means) - HIGH_CUTOFF:
+            temp.append(means[i])
+
+    # This generates an equation which should estimate the background noise
+    #   for any given frequency.
+    x, y = zip(*temp)
+    x = [float(t) for t in x]
+    y = [float(t) for t in y]
+
+    polyfilter = np.polyfit(x, y, 3)
+    polyeqn = np.poly1d(polyfilter)
+
+    print("Terms for polynomial approximation of noise is %s" % polyfilter)
+
+    for i in range(len(x)):
+        y[i] = y[i] - polyeqn(x[i])
+
+    return [(x[i],y[i]) for i in range(len(x))]
 
 # Apply some thresholding and filtering to the dataset.
 def processdata(means):
 
-    thresholded = threshold(means)
+    filtered = threshold(means)
 
-    datafilter(means, thresholded)
+    # filtered = datafilter(means, filtered)
 
-    return thresholded
+    return filtered
 
 def main(argv):
 
     filename = ""
 
+    global LOW_CUTOFF
+    global HIGH_CUTOFF
+
     try:
-        opts, args = getopt.getopt(argv,"hi:",["input="])
+        opts, args = getopt.getopt(argv,"hi:l:t:",["input="])
     except getopt.GetoptError:
-        print("parser.py -i <input file>")
+        print("parser.py -i <input file> -l <lower_threshold> -t <upper_threshold>")
         sys.exit(2)
 
     for opt, arg in opts:
         if opt == '-h':
-            print("parser.py -i <input file>")
+            print("parser.py -i <input file> -l <lower_threshold> -t <upper_threshold>")
             sys.exit(0)
         elif opt in ("-i", "--input"):
-            print("opt")
             filename = arg
+        elif opt in ("-l"):
+            LOW_CUTOFF = int(arg)
+        elif opt in ("-t"):
+            HIGH_CUTOFF = int(arg)
 
     print("Parsing file %s\n" % filename)
 
