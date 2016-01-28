@@ -2,10 +2,18 @@ import sys, getopt
 from collections import OrderedDict
 import matplotlib.pyplot as plt
 
+#These values are adjust to ignore the first and last 10 data points, since they
+#   go to 0 and are bad data.
+
 #Index of first temperature value
 TEMP_OFFSET = 20
-
+#Number of bins of data to gather per line from file
 NUM_CHANNELS = 135
+
+# Filtering cutoffs. This means filter the first LOW_CUTOFF, and the last
+# HIGH_CUTOFF data points from the dataset
+LOW_CUTOFF = 45
+HIGH_CUTOFF = 23
 
 def parse(filename):
 
@@ -55,12 +63,21 @@ def parse(filename):
         means[key] = sum(spectra[key])/len(spectra[key])
         print("%8s\t\t%s" % (key, means[key]))
 
-    plot = plt.plot(list(means.keys()), list(means.values()))
-    plt.title("Temperature vs. Frequency Across Measured Spectra")
-    plt.xlabel("Frequency (MHz)")
-    plt.ylabel("Temperature (K)")
-    plt.tight_layout()
-    plt.show()
+    return means
+
+def processdata(means):
+
+    i = 0
+    newmeans = OrderedDict()
+
+    for key in means.keys():
+
+        if  i > LOW_CUTOFF and i < len(means.keys()) - HIGH_CUTOFF:
+            newmeans[key] = means[key]
+
+        i += 1
+
+    return newmeans
 
 def main(argv):
 
@@ -82,7 +99,19 @@ def main(argv):
 
     print("Parsing file %s\n" % filename)
 
-    parse(filename)
+    data_means = parse(filename)
+
+    unfiltered = data_means.copy()
+
+    processed = processdata(data_means)
+
+    plot = plt.plot(list(processed.keys()), list(processed.values()), 'ro')
+    plot2 = plt.plot(list(unfiltered.keys()), list(unfiltered.values()))
+    plt.title("Temperature vs. Frequency Across Measured Spectra")
+    plt.xlabel("Frequency (MHz)")
+    plt.ylabel("Temperature (K)")
+    plt.tight_layout()
+    plt.show()
 
 if __name__=="__main__":
     main(sys.argv[1:])
