@@ -65,19 +65,35 @@ def parse(filename):
 
     return means
 
-def processdata(means):
+# Returns an OrderedDict of datapoints from the input file, where each point
+#   below LOW_CUTOFF and each point above HIGH_CUTOFF is removed.
+def threshold(means):
 
     i = 0
-    newmeans = OrderedDict()
+    newmeans = list()
 
-    for key in means.keys():
+    for datapoint in means:
 
-        if  i > LOW_CUTOFF and i < len(means.keys()) - HIGH_CUTOFF:
-            newmeans[key] = means[key]
+        if  i > LOW_CUTOFF and i < len(means) - HIGH_CUTOFF:
+            newmeans.append(datapoint)
 
         i += 1
 
     return newmeans
+
+# Generate polyfit equation for background noise based on points outside the
+#   LOW_CUTOFF -> HIGH_CUTOFF range, and subtract that from the datapoints.
+def datafilter(means, thresholded):
+    pass
+
+# Apply some thresholding and filtering to the dataset.
+def processdata(means):
+
+    thresholded = threshold(means)
+
+    datafilter(means, thresholded)
+
+    return thresholded
 
 def main(argv):
 
@@ -101,12 +117,14 @@ def main(argv):
 
     data_means = parse(filename)
 
-    unfiltered = data_means.copy()
+    # Process data into a list of tuples
+    unfiltered = [(key, data_means[key]) for key in data_means.keys()]
+    means_tuple = unfiltered
 
-    processed = processdata(data_means)
+    processed = processdata(means_tuple)
 
-    plot = plt.plot(list(processed.keys()), list(processed.values()), 'ro')
-    plot2 = plt.plot(list(unfiltered.keys()), list(unfiltered.values()))
+    plot = plt.plot(*zip(*processed), 'r')
+    plot2 = plt.plot(*zip(*unfiltered), 'b--')
     plt.title("Temperature vs. Frequency Across Measured Spectra")
     plt.xlabel("Frequency (MHz)")
     plt.ylabel("Temperature (K)")
