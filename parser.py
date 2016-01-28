@@ -87,7 +87,7 @@ def datafilter(means, thresholded):
     temp = list()
 
     for i in range(len(means)):
-        if  i < LOW_CUTOFF or i < len(means) - HIGH_CUTOFF:
+        if  i < LOW_CUTOFF or i > len(means) - HIGH_CUTOFF:
             temp.append(means[i])
 
     # This generates an equation which should estimate the background noise
@@ -111,7 +111,7 @@ def processdata(means):
 
     filtered = threshold(means)
 
-    # filtered = datafilter(means, filtered)
+    filtered = datafilter(means, filtered)
 
     return filtered
 
