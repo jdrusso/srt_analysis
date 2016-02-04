@@ -18,7 +18,7 @@ NUM_CHANNELS = 135
 LOW_CUTOFF = 45
 HIGH_CUTOFF = 23
 
-FILTER_POLYNOMIAL_DEGREE = 3
+FILTER_POLYNOMIAL_DEGREE = 1
 
 def parse(filename):
 
@@ -63,10 +63,10 @@ def parse(filename):
     print("%d lines of data found." % i)
 
     means = OrderedDict()
-    print("Frequency\t\tMean Temperature")
+    # print("Frequency\t\tMean Temperature")
     for key in spectra.keys():
         means[key] = sum(spectra[key])/len(spectra[key])
-        print("%8s\t\t%s" % (key, means[key]))
+        # print("%8s\t\t%s" % (key, means[key]))
 
     return means
 
@@ -88,6 +88,9 @@ def threshold(means):
 #   LOW_CUTOFF -> HIGH_CUTOFF range, and subtract that from the datapoints.
 def datafilter(means, thresholded):
 
+    if (LOW_CUTOFF == 0 or HIGH_CUTOFF == 0):
+        return thresholded, means, 0
+
     # Make a list of only the values that are thresholded *out*. We will calculate
     #   background noise from these.
 
@@ -103,14 +106,12 @@ def datafilter(means, thresholded):
     polyfilter = np.polyfit(x, y, FILTER_POLYNOMIAL_DEGREE)
     polyeqn = np.poly1d(polyfilter)
 
-    print("Polynomial approximation of noise is ")
+    print("\nPolynomial approximation of noise is ")
     print(polyeqn)
 
     for i in range(len(means)):
 
         corrected = means[i][1] - polyeqn(float(means[i][0]))
-
-        # print("Correcting %5f by %5f" % (means[i][1], polyeqn(float(means[i][0]))))
         means[i] = (means[i][0], corrected)
 
     for i in range(len(thresholded)):
@@ -135,11 +136,13 @@ def processdata(means):
 
 def main(argv):
 
-    filename = ""
+    filename = str()
 
     # YOLO
     global LOW_CUTOFF
     global HIGH_CUTOFF
+
+    LOW_CUTOFF, HIGH_CUTOFF = 0, 0
 
     try:
         opts, args = getopt.getopt(argv,"hi:l:t:",["input="])
@@ -175,24 +178,24 @@ def main(argv):
     points = [float(processedmeans[i][0]) for i in range(len(processedmeans))]
     thresholdedpoints = [points[i] for i in range(len(points))
         if (i < LOW_CUTOFF or i > len(points) - HIGH_CUTOFF)]
-    avg = np.average(np.poly1d(polyfilter)(thresholdedpoints))
-    # print(np.poly1d(polyfilter))
-    # print(avg)
 
-    f, axarr = plt.subplots(2, sharex=True)
-    axarr[1].plot(*zip(*processed), 'b',
-                    *zip(*processedmeans), 'r.')#,
-                    # points, np.poly1d(polyfilter)(points) - avg, 'g--')
+    f, axarr = plt.subplots(1, sharex=True)
+    axarr.plot(*zip(*processed), 'b',
+                    *zip(*processedmeans), 'r.',
+                    points, np.zeros(len(points)), 'g-')
 
-    axarr[0].set_title("Temperature vs. Frequency Across Measured Spectra (Unfiltered)")
-    axarr[1].set_title("Temperature vs. Frequency Across Measured Spectra (Filtered)")
-    axarr[1].set_xlabel("Frequency (MHz)")
-    axarr[0].set_ylabel("Temperature (K)")
-    axarr[1].set_ylabel("Temperature (K)")
+    axarr.axvline(points[LOW_CUTOFF])
+    axarr.axvline(points[len(points)-(HIGH_CUTOFF + 1)])
 
-    axarr[0].plot(*zip(*threshold(unfiltered)),
-                    *zip(*unfiltered), 'r.',
-                    points, np.poly1d(polyfilter)(points), 'g--')
+    axarr.set_title("Temperature vs. Frequency Across Measured Spectra")
+    # axarr[1].set_title("Temperature vs. Frequency Across Measured Spectra (Filtered)")
+    axarr.set_xlabel("Frequency (MHz)")
+    axarr.set_ylabel("Temperature (K)")
+    # axarr[1].set_ylabel("Temperature (K)")
+
+    # axarr[0].plot(*zip(*threshold(unfiltered)),
+                    # *zip(*unfiltered), 'r.',
+                    # points, np.poly1d(polyfilter)(points), 'g--')
 
     plt.tight_layout()
     plt.show()
